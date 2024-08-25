@@ -372,7 +372,9 @@
       tbody.innerHTML = ``;
       let i = 0;
       for (const file of files) {
+        const rowId = `row_${i}`;
         const row = document.createElement(`tr`);
+        row.setAttribute(`id`, rowId);
         row.classList.add(`dataset-row`);
         row.classList.add(i % 2 ? `even` : `odd`);
         
