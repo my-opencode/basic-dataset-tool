@@ -409,6 +409,7 @@
         row.appendChild(tagCell);
         tbody.appendChild(row);
         $on(descriptionField, DOM_EVENTS.change, queueChange);
+        $on(removeButton, DOM_EVENTS.click, handleImageRemove);
       }
     }
     function resetTable() {
