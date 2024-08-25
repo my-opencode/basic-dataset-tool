@@ -463,6 +463,10 @@
       // Close the file and write the contents to disk.
       await writable.close();
     }
+    function updateImageCounter() {
+      const el = $id(DOM_IDS.imageCounter);
+      el.innerText = String(files.length);
+    }
 
     function showErrorToast(text, service = "System", time = "just now") {
       const errorToast = $id(DOM_IDS.snackbar);
