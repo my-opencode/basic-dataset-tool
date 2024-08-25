@@ -468,6 +468,23 @@
       if (!dirH) return;
       return await dirH.getDirectoryHandle(`deleted`, { create: true });
     }
+    async function handleImageRemove(e) {
+      // Fetch data
+      const rowId = e.target.dataset.target;
+      const name = e.target.dataset.name;
+      // File system update
+      const fileInfo = fileLookupTable.get(name);
+      const deleteResult = await removeImageAndTag(fileInfo);
+      fileLookupTable.delete(name);
+      files = files.filter(f => f.name !== name);
+      // Dataset update
+      if (deleteResult.deletedImage)
+        updateImageCounter(files.length);
+      if (!deleteResult.deletedTag)
+        updateImageCounter();
+      // DOM update
+      removeTableRow(rowId);
+    }
     function removeTableRow(rowId) {
       const row = $id(rowId);
       row.remove();
