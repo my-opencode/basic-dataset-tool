@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dataset Tag Tool</title>
+  <style>
+    table {
+      margin: auto;
+      padding: 0;
+      border: 0;
+      border-collapse: collapse;
+    }
+    table tr, table td {
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    thead td {
+      min-width: 100px;
+      font-weight: bold;
+    }
+    table tr {
+      border: 3px solid grey;
+    }
+    table td {
+      margin: 10px 0;
+      padding: 5px;
+      vertical-align: top;
+    }
+
+    #dataset-body textarea {
+      width: 512px;
+      min-height: 256px;
+    }
+
+    .dataset-row {
+      margin: 0 5vh;
+    }
+
+    .dataset-row.odd {
+      background-color: lightgrey;
+    }
+
+    .dataset-row.even {}
+
+    /* The snackbar - position it at the bottom and in the middle of the screen */
+    #snackbar {
+      visibility: hidden;
+      /* Hidden by default. Visible on click */
+      min-width: 250px;
+      /* Set a default minimum width */
+      margin-left: -125px;
+      /* Divide value of min-width by 2 */
+      background-color: #333;
+      /* Black background color */
+      color: #fff;
+      /* White text color */
+      text-align: center;
+      /* Centered text */
+      border-radius: 2px;
+      /* Rounded borders */
+      padding: 16px;
+      /* Padding */
+      position: fixed;
+      /* Sit on top of the screen */
+      z-index: 999;
+      /* Add a z-index if needed */
+      left: 50%;
+      /* Center the snackbar */
+      bottom: 30px;
+      /* 30px from the bottom */
+    }
+
+    /* Show the snackbar when clicking on a button (class added with JavaScript) */
+    #snackbar.show {
+      visibility: visible;
+      /* Show the snackbar */
+      /* Add animation: Take 0.5 seconds to fade in and out the snackbar.
+  However, delay the fade out process for 2.5 seconds */
+      -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+      animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    }
+
+    /* Animations to fade the snackbar in and out */
+    @-webkit-keyframes fadein {
+      from {
+        bottom: 0;
+        opacity: 0;
+      }
+
+      to {
+        bottom: 30px;
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadein {
+      from {
+        bottom: 0;
+        opacity: 0;
+      }
+
+      to {
+        bottom: 30px;
+        opacity: 1;
+      }
+    }
+
+    @-webkit-keyframes fadeout {
+      from {
+        bottom: 30px;
+        opacity: 1;
+      }
+
+      to {
+        bottom: 0;
+        opacity: 0;
+      }
+    }
+
+    @keyframes fadeout {
+      from {
+        bottom: 30px;
+        opacity: 1;
+      }
+
+      to {
+        bottom: 0;
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <label id="folder-name" for="folder-picker">Select a directory</label>
+    <button id="folder-picker" name="folder-picker">Select Directory</button>
+    <button id="folder-refresh" name="folder-refresh">Refresh Dataset</button>
+  </nav>
+  <hr />
+  <header>
+    <h2>Dataset Info</h2>
+    <span id="dataset-info">No dataset loaded.</span>
+  </header>
+  <hr />
+  <table cellspacing="0">
+    <thead>
+      <tr>
+        <td># — Name</td>
+        <td>Image</td>
+        <td>Description</td>
+      </tr>
+    </thead>
+    <tbody id="dataset-body"></tbody>
+  </table>
+
+  <div id="credits">
+    Extremely basic Dataset editing tool.<br />
+    Provided free of charge by <a href="https://civitai.com/user/industrialvectors">@IndustrialVectors</a><br />
+    MIT License
+  </div>
+  <div id="disclaimer">
+    The author of this tool is not responsible for what any user does with it.<br />
+    The author actually DOES NOT recommend using this tool.<br />
+    Be aware that the changes done to your local files are immediate and permanent. There is no history or backup for
+    changes.
+  </div>
+
+  <!-- error toast -->
+  <div id="snackbar">
+    <div id="snackbar-header">
+      <svg id="snackbar-icon" width="20" height="20" xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMidYMid slice" focusable="false">
+        <rect width="100%" height="100%" fill="#007aff"></rect>
+      </svg>
+      <strong id="snackbar-service">Importer</strong>
+      <small id="snackbar-time">just now</small>
+      <button id="snackbar-button" type="button">Close</button>
+    </div>
+    <div id="snackbar-text">Invalid data folder.</div>
+  </div>
+
+  <script type="text/javascript">
+    const IMAGE_EXTENSIONS = [`jpg`, `jpeg`, `png`];
+    const DOM_IDS = {
+      datasetBody: `dataset-body`,
+      datasetInfo: `dataset-info`,
+      folderName: `folder-name`,
+      folderPicker: `folder-picker`,
+      folderRefresh: `folder-refresh`,
+      snackbar: `snackbar`,
+      snackbarButton: `snackbar-button`,
+      snackbarService: `snackbar-service`,
+      snackbarTime: `snackbar-time`,
+      snackbarText: `snackbar-text`,
+    };
+    const DOM_EVENTS = {
+      change: `change`,
+      click: `click`,
+    };
+    var dirH;
+    var files = [];
+    var fileLookupTable = new Map();
+    const sampleFile = {
+      filename: `unique_image_name.ext`,
+      name: `unique image name`,
+      ext: `image extension`,
+      width: 1,
+      height: 1,
+      description: `may be empty`
+    };
+    var updateQueue = [];
+    var updateQueued = new Set();
+    var queueController;
+
+    function $id(id) {
+      if (typeof id !== `string` || !id?.length) throw new TypeError(`function $id(id:string) requires a string argument.`);
+      return document.getElementById(id);
+    }
+    function $cl(className) {
+      if (typeof className !== `string` || !className?.length) throw new TypeError(`function $cl(className:string) requires a string argument.`);
+      return document.getElementsByClassName(className);
+    }
+    function $on(idOrEl, eventName, cb) {
+      let el;
+      if (idOrEl instanceof HTMLElement) el = idOrEl;
+      else if (typeof idOrEl !== `string` || !idOrEl?.length) throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'id' argument.`);
+      if (typeof eventName !== `string` || !eventName?.length) throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'eventName' argument.`);
+      if (!cb || !(cb instanceof Function)) throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a function 'cb' argument.`);
+      if (!el) el = $id(idOrEl);
+      if (!el) throw new Error(`Target element not found with id '${id}'.`);
+      el.addEventListener(eventName, cb);
+    }
+
+    // acts as entry point
+    $on(DOM_IDS.folderPicker, DOM_EVENTS.click, selectDirectory);
+    // refresh
+    $on(DOM_IDS.folderRefresh, DOM_EVENTS.click, loadDatasetTable);
+
+    function onlyOnChrome() {
+      if (!window.showDirectoryPicker) {
+        showErrorToast(`This functionality only works on Chrome.`);
+        throw new Error(`This functionality only works on Chrome.`);
+      }
+    }
+
+    async function selectDirectory(e) {
+      onlyOnChrome();
+      let dirHandle = undefined;
+      try {
+        dirHandle = await window.showDirectoryPicker({
+          mode: `readwrite`
+        });
+      }
+      catch (err) {
+        // user cancelled
+      }
+      if (!dirHandle)
+        return showErrorToast("Invalid data folder.", "Importer");
+      dirH = dirHandle;
+
+      setDirectoryName();
+      setSelectDirBtnLabelToChange();
+
+      await loadDatasetTable();
+    }
+    async function loadDatasetTable() {
+      if (!dirH) {
+        showErrorToast(`Please select a folder.`,`Importer`);
+        return;
+      }
+      await listFilesInDirectory();
+      displayDatasetInfo();
+      generateTable();
+    }
+
+    function setDirectoryName() {
+      if (dirH)
+        $id(DOM_IDS.folderName).innerText = dirH.name;
+    }
+    function setSelectDirBtnLabelToChange() {
+      $id(DOM_IDS.folderPicker).innerText = `Change directory`;
+    }
+
+    async function listFilesInDirectory() {
+      if (dirH)
+        for await (const handle of dirH.values()) {
+          if (handle.kind !== `file`) continue;
+          const { name, ext } = getNameAndExtension(handle.name);
+          if (!ext) continue;
+          extL = ext.toLowerCase();
+          if (!IMAGE_EXTENSIONS.includes(extL) && extL !== `txt`) continue;
+          initNewFile(name);
+          const file = fileLookupTable.get(name);
+          if (extL === `txt`) {
+            file.description = await dataFileToString(handle);
+          }
+          else {
+            file.filename = handle.name;
+            file.ext = ext;
+          }
+        }
+      files = files.sort((a,b) => a.name > b.name ? 1 : a.name < b.name ? -1 : 0);
+    }
+    function getMissingDescCount() {
+      return this.files.filter(f => !f.description).length;
+    }
+
+    function getNameAndExtension(fileName) {
+      const extIndex = fileName.lastIndexOf(`.`);
+      if (extIndex === -1)
+        //   throw new Error(`File without extension.`);
+        return { name: fileName };
+      return { name: fileName.slice(0, extIndex), ext: fileName.slice(extIndex + 1) };
+    }
+    function initNewFile(name) {
+      if (!fileLookupTable.has(name)) {
+        const file = { name };
+        fileLookupTable.set(name, file);
+        files.push(file);
+      }
+    }
+    async function dataFileToString(fileHandle) {
+      const f = await fileHandle.getFile();
+      const s = await f.text();
+      return s || ``;
+    }
+
+    function displayDatasetInfo() {
+      const el = $id(DOM_IDS.datasetInfo);
+      el.innerHTML = ``;
+      const imgCount = document.createTextNode(`${files.length} image${files.length > 1 ? `s` : ``} in dataset`);
+      const sep = document.createElement(`br`);
+      const missingCountLabel = document.createTextNode(`Number of image(s) missing tag description: `);
+      const missingCount = document.createElement(`span`);
+      DOM_IDS.datasetInfoMissingCount = `dataset-info-missing-count`;
+      missingCount.setAttribute(`id`, DOM_IDS.datasetInfoMissingCount);
+      el.appendChild(imgCount);
+      el.appendChild(sep);
+      el.appendChild(missingCountLabel);
+      el.appendChild(missingCount);
+      updateMissingDescCount();
+    }
+    function updateMissingDescCount() {
+      $id(DOM_IDS.datasetInfoMissingCount).innerText = getMissingDescCount();
+    }
+    async function generateTable() {
+      const tbody = $id(DOM_IDS.datasetBody);
+      tbody.innerHTML = ``;
+      let i = 0;
+      for (const file of files) {
+        const row = document.createElement(`tr`);
+        row.classList.add(`dataset-row`);
+        row.classList.add(i % 2 ? `even` : `odd`);
+        
+        const numberCell = document.createElement(`td`);
+        numberCell.innerText = `${++i} — ${file.name}`;
+
+        const imgCell = document.createElement(`td`);
+        const img = document.createElement(`img`);
+        img.setAttribute(`width`, `512`);
+        img.setAttribute(`src`, await getImgUrl(file.filename));
+        imgCell.appendChild(img);
+
+        const tagCell = document.createElement(`td`);
+        const descriptionField = document.createElement(`textarea`);
+        // descriptionField.setAttribute(`value`, file.description);
+        descriptionField.setAttribute(`data-name`, file.name);
+        descriptionField.setAttribute(`id`, `field-${file.name}`);
+        descriptionField.setAttribute(`rows`, 20);
+        descriptionField.textContent = file.description || ``;
+        tagCell.appendChild(descriptionField);
+
+        row.appendChild(numberCell);
+        row.appendChild(imgCell);
+        row.appendChild(tagCell);
+        tbody.appendChild(row);
+        $on(descriptionField, DOM_EVENTS.change, queueChange);
+      }
+    }
+    function resetTable() {
+      $id(DOM_IDS.datasetBody).innerHTML = ``;
+    }
+    async function getImgUrl(filename) {
+      if (!dirH) return;
+      const handle = await dirH.getFileHandle(filename);
+      if (!handle)
+        throw new Error(`Cannot get handle for "${filename}"`);
+      const file = await handle.getFile();
+      return URL.createObjectURL(file);
+    }
+
+    function queueChange(e) {
+      const name = e.target.dataset.name;
+      if (!updateQueued.has(name)) {
+        updateQueue.push(name);
+        updateQueued.add(name);
+        if (!queueController)
+          queueController = saveNextChange();
+      }
+    }
+    async function saveNextChange() {
+      const name = updateQueue.shift();
+      updateQueued.delete(name);
+
+      const file = fileLookupTable.get(name);
+      if (!file) {
+        showErrorToast(`File not found for field ${name}`, `Saver`);
+        throw new Error(`File not found for field ${name}`);
+      }
+      const newVal = $id(`field-${name}`).value.trim();
+      if (newVal !== file.description); {
+        await writeFile(`${file.name}.txt`, newVal);
+        file.description = newVal;
+      }
+      if (updateQueue.length)
+        queueController = setTimeout(saveNextChange, 1000);
+      else queueController = null;
+    }
+    async function writeFile(filename, contents) {
+      const fileHandle = await dirH.getFileHandle(filename, {
+        create: true,
+      });
+      // Create a FileSystemWritableFileStream to write to.
+      const writable = await fileHandle.createWritable();
+      // Write the contents of the file to the stream.
+      await writable.write(contents);
+      // console.log(`Not actually writing`);
+      // console.log(contents);
+      // Close the file and write the contents to disk.
+      await writable.close();
+    }
+
+    function showErrorToast(text, service = "System", time = "just now") {
+      const errorToast = $id(DOM_IDS.snackbar);
+      if (!errorToast) throw new Error(`Toast DOM Element not found.`);
+
+      $id(DOM_IDS.snackbarService).innerText = service;
+      $id(DOM_IDS.snackbarTime).innerText = time;
+      $id(DOM_IDS.snackbarText).innerText = text;
+
+      errorToast.className = "show";
+      setTimeout(closeErrorToast, 3000);
+    }
+    function closeErrorToast() {
+      const tgt = $id(DOM_IDS.snackbar);
+      tgt.className = tgt.className.replace("show", "");
+    }
+  </script>
+</body>
+
+</html>
