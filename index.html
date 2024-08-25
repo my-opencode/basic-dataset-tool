@@ -468,6 +468,10 @@
       if (!dirH) return;
       return await dirH.getDirectoryHandle(`deleted`, { create: true });
     }
+    function removeTableRow(rowId) {
+      const row = $id(rowId);
+      row.remove();
+    }
     async function removeFile(filename) {
       const srcFileHandle = await dirH.getFileHandle(filename);
       const delDirH = await getTrashDirectoryH();
