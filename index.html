@@ -12,18 +12,23 @@
       border: 0;
       border-collapse: collapse;
     }
-    table tr, table td {
+
+    table tr,
+    table td {
       margin: 0;
       padding: 0;
       border: 0;
     }
+
     thead td {
       min-width: 100px;
       font-weight: bold;
     }
+
     table tr {
       border: 3px solid grey;
     }
+
     table td {
       margin: 10px 0;
       padding: 5px;
@@ -269,7 +274,7 @@
     }
     async function loadDatasetTable() {
       if (!dirH) {
-        showErrorToast(`Please select a folder.`,`Importer`);
+        showErrorToast(`Please select a folder.`, `Importer`);
         return;
       }
       await listFilesInDirectory();
@@ -303,7 +308,7 @@
             file.ext = ext;
           }
         }
-      files = files.sort((a,b) => a.name > b.name ? 1 : a.name < b.name ? -1 : 0);
+      files = files.sort((a, b) => a.name > b.name ? 1 : a.name < b.name ? -1 : 0);
     }
     function getMissingDescCount() {
       return this.files.filter(f => !f.description).length;
