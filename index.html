@@ -34,11 +34,11 @@
       padding: 5px;
       vertical-align: top;
     }
-
+    /* 
     #dataset-body textarea {
       width: 512px;
       min-height: 256px;
-    }
+    } */
 
     .dataset-row {
       margin: 0 5vh;
@@ -146,6 +146,35 @@
         opacity: 0;
       }
     }
+
+    #gui-options.open-dialog {
+      width: 600px;
+      background-color: lightgray;
+      border: dimgray 2px solid;
+      border-radius: 20px;
+    }
+
+    ::backdrop {
+      background-image: radial-gradient(black,white);
+      opacity: 0.75;
+    }
+
+    .rel {
+      position:relative;
+      height: 400px;
+      padding: 20px;
+    }
+
+    #gui-options h1 {
+      margin-top: 0;
+    }
+
+    #gui-options button#gui-options-close {
+      position: absolute;
+      width: 80px;
+      left: calc(300px - 50px);
+      bottom: 20px;
+    }
   </style>
 </head>
 
@@ -154,6 +183,7 @@
     <label id="folder-name" for="folder-picker">Select a directory</label>
     <button id="folder-picker" name="folder-picker">Select Directory</button>
     <button id="folder-refresh" name="folder-refresh">Refresh Dataset</button>
+    <button id="gui-options-toggle" name="gui-options-toggle">⚙</button>
   </nav>
   <hr />
   <header>
@@ -198,6 +228,20 @@
     <div id="snackbar-text">Invalid data folder.</div>
   </div>
 
+  <!-- gui options modal -->
+  <dialog id="gui-options">
+    <div class="rel">
+      <h1>Options</h1>
+      <div>
+        <label for="zoom-size">Zoom size: </label>
+        <input type="range" name="option-zoom-size" id="option-zoom-size" min="0" max="5" value="4" />
+        <span id="option-zoom-size-viewer">512px</span>
+
+      </div>
+      <button id="gui-options-close">Close</button>
+    </div>
+  </dialog>
+
   <script type="text/javascript">
     const IMAGE_EXTENSIONS = [`jpg`, `jpeg`, `png`];
     const DOM_IDS = {
@@ -206,7 +250,12 @@
       folderName: `folder-name`,
       folderPicker: `folder-picker`,
       folderRefresh: `folder-refresh`,
+      guiOptions: `gui-options`,
+      guiOptionsCLose: `gui-options-close`,
+      guiOptionsToggle: `gui-options-toggle`,
       imageCounter: `image-counter`,
+      optionZoomSize: `option-zoom-size`,
+      optionZoomSizeViewer: `option-zoom-size-viewer`,
       snackbar: `snackbar`,
       snackbarButton: `snackbar-button`,
       snackbarService: `snackbar-service`,
@@ -232,6 +281,9 @@
     var updateQueued = new Set();
     var queueController;
 
+    const zoomValues = [32,64,128,256,512,1024];
+    var zoomValue = 512;
+
     function $id(id) {
       if (typeof id !== `string` || !id?.length) throw new TypeError(`function $id(id:string) requires a string argument.`);
       return document.getElementById(id);
@@ -255,6 +307,9 @@
     $on(DOM_IDS.folderPicker, DOM_EVENTS.click, selectDirectory);
     // refresh
     $on(DOM_IDS.folderRefresh, DOM_EVENTS.click, loadDatasetTable);
+    // options gui
+    $on(DOM_IDS.guiOptionsToggle, DOM_EVENTS.click, toggleGuiModal);
+    $on(DOM_IDS.guiOptionsCLose, DOM_EVENTS.click, closeGuiModal);
 
     function onlyOnChrome() {
       if (!window.showDirectoryPicker) {
@@ -377,7 +432,7 @@
         row.setAttribute(`id`, rowId);
         row.classList.add(`dataset-row`);
         row.classList.add(i % 2 ? `even` : `odd`);
-        
+
         const numberCell = document.createElement(`td`);
         numberCell.innerText = `${++i} — ${file.name}`;
         const numberCellLineBreak = document.createElement(`br`);
@@ -391,7 +446,7 @@
 
         const imgCell = document.createElement(`td`);
         const img = document.createElement(`img`);
-        img.setAttribute(`width`, `512`);
+        img.setAttribute(`width`, String(zoomValue));
         img.setAttribute(`src`, await getImgUrl(file.filename));
         imgCell.appendChild(img);
 
@@ -400,6 +455,7 @@
         // descriptionField.setAttribute(`value`, file.description);
         descriptionField.setAttribute(`data-name`, file.name);
         descriptionField.setAttribute(`id`, `field-${file.name}`);
+        descriptionField.setAttribute(`style`, `width: ${zoomValue}px; min-height: ${zoomValue/2}px`);
         descriptionField.setAttribute(`rows`, 20);
         descriptionField.textContent = file.description || ``;
         tagCell.appendChild(descriptionField);
@@ -524,6 +580,28 @@
     function closeErrorToast() {
       const tgt = $id(DOM_IDS.snackbar);
       tgt.className = tgt.className.replace("show", "");
+    }
+    
+    function toggleGuiModal(){
+      const dialog = $id(DOM_IDS.guiOptions);
+      dialog.classList.add(`open-dialog`);
+      dialog.showModal();
+    }
+    function closeGuiModal() {
+      const dialog = $id(DOM_IDS.guiOptions);
+      dialog.classList.remove(`open-dialog`);
+      $id(DOM_IDS.guiOptions).close();
+    }
+
+    $on(DOM_IDS.optionZoomSize, DOM_EVENTS.change, applyZoom);
+    function applyZoom(e) {
+      zoomValue = zoomValues[parseInt(e.target.value)];
+      $id(DOM_IDS.optionZoomSizeViewer).innerText = `${zoomValue}px`;
+      const applyStyle = (el) => {
+        el.setAttribute(`style`,`width: ${zoomValue}px;`);
+      };
+      document.querySelectorAll(`#${DOM_IDS.datasetBody} img`).forEach(applyStyle);
+      document.querySelectorAll(`#${DOM_IDS.datasetBody} textarea`).forEach(applyStyle);
     }
   </script>
 </body>
