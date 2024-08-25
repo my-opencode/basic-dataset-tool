@@ -473,6 +473,16 @@
       const delDirH = await getTrashDirectoryH();
       await srcFileHandle.move(delDirH, filename);
     }
+    async function removeImageAndTag(fileInfo) {
+      const result = { deletedImage: false, deletedTag: false };
+      await removeFile(fileInfo.filename);
+      result.deletedImage = true;
+      if (fileInfo.description) {
+        await removeFile(fileInfo.name + `.txt`);
+        result.deletedTag = true;
+      }
+      return result;
+    }
     function updateImageCounter() {
       const el = $id(DOM_IDS.imageCounter);
       el.innerText = String(files.length);
