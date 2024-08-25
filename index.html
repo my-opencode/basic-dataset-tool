@@ -468,6 +468,11 @@
       if (!dirH) return;
       return await dirH.getDirectoryHandle(`deleted`, { create: true });
     }
+    async function removeFile(filename) {
+      const srcFileHandle = await dirH.getFileHandle(filename);
+      const delDirH = await getTrashDirectoryH();
+      await srcFileHandle.move(delDirH, filename);
+    }
     function updateImageCounter() {
       const el = $id(DOM_IDS.imageCounter);
       el.innerText = String(files.length);
