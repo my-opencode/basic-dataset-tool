@@ -206,6 +206,7 @@
       folderName: `folder-name`,
       folderPicker: `folder-picker`,
       folderRefresh: `folder-refresh`,
+      imageCounter: `image-counter`,
       snackbar: `snackbar`,
       snackbarButton: `snackbar-button`,
       snackbarService: `snackbar-service`,
@@ -347,13 +348,17 @@
     function displayDatasetInfo() {
       const el = $id(DOM_IDS.datasetInfo);
       el.innerHTML = ``;
-      const imgCount = document.createTextNode(`${files.length} image${files.length > 1 ? `s` : ``} in dataset`);
+      const counterEl = document.createElement(`span`);
+      counterEl.setAttribute(`id`, DOM_IDS.imageCounter);
+      counterEl.innerHTML = `${files.length}`;
+      const imgCountText = document.createTextNode(` image${files.length > 1 ? `s` : ``} in dataset`);
       const sep = document.createElement(`br`);
       const missingCountLabel = document.createTextNode(`Number of image(s) missing tag description: `);
       const missingCount = document.createElement(`span`);
       DOM_IDS.datasetInfoMissingCount = `dataset-info-missing-count`;
       missingCount.setAttribute(`id`, DOM_IDS.datasetInfoMissingCount);
-      el.appendChild(imgCount);
+      el.appendChild(counterEl);
+      el.appendChild(imgCountText);
       el.appendChild(sep);
       el.appendChild(missingCountLabel);
       el.appendChild(missingCount);
