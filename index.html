@@ -463,6 +463,11 @@
       // Close the file and write the contents to disk.
       await writable.close();
     }
+
+    async function getTrashDirectoryH() {
+      if (!dirH) return;
+      return await dirH.getDirectoryHandle(`deleted`, { create: true });
+    }
     function updateImageCounter() {
       const el = $id(DOM_IDS.imageCounter);
       el.innerText = String(files.length);
