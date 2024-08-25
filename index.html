@@ -380,6 +380,14 @@
         
         const numberCell = document.createElement(`td`);
         numberCell.innerText = `${++i} — ${file.name}`;
+        const numberCellLineBreak = document.createElement(`br`);
+        numberCell.appendChild(numberCellLineBreak);
+        const removeButton = document.createElement(`button`);
+        removeButton.setAttribute(`data-target`, rowId);
+        removeButton.setAttribute(`data-name`, file.name);
+        removeButton.innerText = `×`;
+        removeButton.classList.add(`rmv-row-btn`);
+        numberCell.appendChild(removeButton);
 
         const imgCell = document.createElement(`td`);
         const img = document.createElement(`img`);
