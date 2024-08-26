@@ -1,5 +1,7 @@
 # Extremely basic Dataset Tagging Tool
 
+> Version 0.2.0 
+
 ## Description
 
 This is a basic tool to edit image datasets. \
@@ -74,3 +76,24 @@ Click the Cogwheel button to open the options panel.
 ## License
 
 MIT
+
+## Changes
+
+### Version 0.2.0
+
+- Options menu
+- Zoom option
+
+### Version 0.1.0
+
+Unreleased
+- Remove image
+  - Image file & image tag file are moved to the deleted subdirectory
+
+### Version 0.0.1
+
+First release to CivitAI
+- Load Dataset
+- Refresh Dataset
+- Display image name, image, image tag file contents
+- Create/Update image tag file contents upon change
