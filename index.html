@@ -175,6 +175,29 @@
       left: calc(300px - 50px);
       bottom: 20px;
     }
+
+    .pill-good,
+    .pill-okay,
+    .pill-bad {
+      display: inline-block;
+      border-radius: 8px;
+      padding: 5px;
+    }
+    .pill-good {
+      background-color: lightgreen;
+      color: darkgreen;
+      border: green 1px solid;
+    }
+    .pill-okay {
+      background-color: lightyellow;
+      color: orange;
+      border: orange 1px solid;
+    }
+    .pill-bad {
+      background-color: lightcoral;
+      color: darkred;
+      border: red 1px solid;
+    }
   </style>
 </head>
 
@@ -432,24 +455,59 @@
         row.setAttribute(`id`, rowId);
         row.classList.add(`dataset-row`);
         row.classList.add(i % 2 ? `even` : `odd`);
-
+        // row number & image name
         const numberCell = document.createElement(`td`);
         numberCell.innerText = `${++i} — ${file.name}`;
         const numberCellLineBreak = document.createElement(`br`);
         numberCell.appendChild(numberCellLineBreak);
+        // image size
+        const imgSizeEl = document.createElement(`p`);
+        const imgHeightId = `height-${String(i).padStart(4, `0`)}`;
+        const imgWidthId = `width-${String(i).padStart(4, `0`)}`;
+        {
+          const imgWidthEl = document.createElement(`span`);
+          imgWidthEl.setAttribute(`id`, imgWidthId);
+          imgSizeEl.appendChild(imgWidthEl);
+          const imgSizeXEl = document.createElement(`span`);
+          imgSizeXEl.innerText = ` x `;
+          imgSizeEl.appendChild(imgSizeXEl);
+          const imgHeightEl = document.createElement(`span`);
+          imgHeightEl.setAttribute(`id`, imgHeightId);
+          imgSizeEl.appendChild(imgHeightEl);
+        }
+        numberCell.appendChild(imgSizeEl);
+        // image size quality
+        const imgSizeQualityId = `sizepill-${String(i).padStart(4, `0`)}`;
+        const imgSizeQualityEl = document.createElement(`p`);
+        imgSizeQualityEl.setAttribute(`id`, imgSizeQualityId);
+        numberCell.append(imgSizeQualityEl);
+        // remove button
         const removeButton = document.createElement(`button`);
         removeButton.setAttribute(`data-target`, rowId);
         removeButton.setAttribute(`data-name`, file.name);
         removeButton.innerText = `×`;
         removeButton.classList.add(`rmv-row-btn`);
         numberCell.appendChild(removeButton);
-
+        // image
         const imgCell = document.createElement(`td`);
         const img = document.createElement(`img`);
         img.setAttribute(`width`, String(zoomValue));
         img.setAttribute(`src`, await getImgUrl(file.filename));
-        imgCell.appendChild(img);
+        img.addEventListener(`load`, (event) => {
+          document.getElementById(imgWidthId).innerText = event.target.naturalWidth;
+          document.getElementById(imgHeightId).innerText = event.target.naturalHeight;
 
+          const pill = document.createElement(`span`);
+          let quality = ((event.target.naturalWidth > 1024 ? 1 : 0) + 
+          (event.target.naturalHeight > 1024 ? 1 : 0 ));
+          quality = quality > 1 ? `good` : quality > 0 ? `okay` : `bad`;
+          pill.innerText = quality;
+          pill.classList.add(`pill-${quality}`);
+          document.getElementById(imgSizeQualityId).innerHTML = ``;
+          document.getElementById(imgSizeQualityId).append(pill);
+        });
+        imgCell.appendChild(img);
+        // prompt
         const tagCell = document.createElement(`td`);
         const descriptionField = document.createElement(`textarea`);
         // descriptionField.setAttribute(`value`, file.description);
