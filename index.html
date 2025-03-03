@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dataset Tag Tool – v0.2</title>
+  <title>Dataset Tag Tool – v0.3</title>
   <style>
     table {
       margin: auto;
@@ -34,6 +34,7 @@
       padding: 5px;
       vertical-align: top;
     }
+
     /* 
     #dataset-body textarea {
       width: 512px;
@@ -155,12 +156,12 @@
     }
 
     ::backdrop {
-      background-image: radial-gradient(black,white);
+      background-image: radial-gradient(black, white);
       opacity: 0.75;
     }
 
     .rel {
-      position:relative;
+      position: relative;
       height: 400px;
       padding: 20px;
     }
@@ -304,7 +305,7 @@
     var updateQueued = new Set();
     var queueController;
 
-    const zoomValues = [32,64,128,256,512,1024];
+    const zoomValues = [32, 64, 128, 256, 512, 1024];
     var zoomValue = 512;
 
     function $id(id) {
@@ -513,7 +514,7 @@
         // descriptionField.setAttribute(`value`, file.description);
         descriptionField.setAttribute(`data-name`, file.name);
         descriptionField.setAttribute(`id`, `field-${file.name}`);
-        descriptionField.setAttribute(`style`, `width: ${zoomValue}px; min-height: ${zoomValue/2}px`);
+        descriptionField.setAttribute(`style`, `width: ${zoomValue}px; min-height: ${zoomValue / 2}px`);
         descriptionField.setAttribute(`rows`, 20);
         descriptionField.textContent = file.description || ``;
         tagCell.appendChild(descriptionField);
@@ -639,8 +640,8 @@
       const tgt = $id(DOM_IDS.snackbar);
       tgt.className = tgt.className.replace("show", "");
     }
-    
-    function toggleGuiModal(){
+
+    function toggleGuiModal() {
       const dialog = $id(DOM_IDS.guiOptions);
       dialog.classList.add(`open-dialog`);
       dialog.showModal();
@@ -656,7 +657,7 @@
       zoomValue = zoomValues[parseInt(e.target.value)];
       $id(DOM_IDS.optionZoomSizeViewer).innerText = `${zoomValue}px`;
       const applyStyle = (el) => {
-        el.setAttribute(`style`,`width: ${zoomValue}px;`);
+        el.setAttribute(`style`, `width: ${zoomValue}px;`);
       };
       document.querySelectorAll(`#${DOM_IDS.datasetBody} img`).forEach(applyStyle);
       document.querySelectorAll(`#${DOM_IDS.datasetBody} textarea`).forEach(applyStyle);

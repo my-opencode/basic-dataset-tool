@@ -1,6 +1,6 @@
 # Extremely basic Dataset Tagging Tool
 
-> Version 0.2.0 
+> Version 0.3.0 
 
 ## Description
 
@@ -73,11 +73,27 @@ Click the Cogwheel button to open the options panel.
   You can control the "zoom" (width of images & text areas) with the zoom option.
   ![](./readme_images/06_options_zoom.png)
 
+### Image size
+
+V0.3.0 adds two minor features:
+
+- Image size
+- Image size quality indicator
+  - Good: width & height are longer than 1024px
+  - Okay: width or height is longer than 1024px
+  - Bad: neither width nor height is longer than 1024px
+![](./readme_images/07_image_size.png)
+
 ## License
 
 MIT
 
 ## Changes
+
+### Version 0.3.0
+
+- Image size
+- Image size quality pill
 
 ### Version 0.2.0
 
