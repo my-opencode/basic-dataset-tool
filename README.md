@@ -82,6 +82,7 @@ V0.3.0 adds two minor features:
   - Good: width & height are longer than 1024px
   - Okay: width or height is longer than 1024px
   - Bad: neither width nor height is longer than 1024px
+
 ![](./readme_images/07_image_size.png)
 
 ## License
