@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dataset Tag Tool – v0.2</title>
+  <title>Dataset Tag Tool – v0.3</title>
   <style>
     table {
       margin: auto;
@@ -34,6 +34,7 @@
       padding: 5px;
       vertical-align: top;
     }
+
     /* 
     #dataset-body textarea {
       width: 512px;
@@ -155,12 +156,12 @@
     }
 
     ::backdrop {
-      background-image: radial-gradient(black,white);
+      background-image: radial-gradient(black, white);
       opacity: 0.75;
     }
 
     .rel {
-      position:relative;
+      position: relative;
       height: 400px;
       padding: 20px;
     }
@@ -174,6 +175,29 @@
       width: 80px;
       left: calc(300px - 50px);
       bottom: 20px;
+    }
+
+    .pill-good,
+    .pill-okay,
+    .pill-bad {
+      display: inline-block;
+      border-radius: 8px;
+      padding: 5px;
+    }
+    .pill-good {
+      background-color: lightgreen;
+      color: darkgreen;
+      border: green 1px solid;
+    }
+    .pill-okay {
+      background-color: lightyellow;
+      color: orange;
+      border: orange 1px solid;
+    }
+    .pill-bad {
+      background-color: lightcoral;
+      color: darkred;
+      border: red 1px solid;
     }
   </style>
 </head>
@@ -281,7 +305,7 @@
     var updateQueued = new Set();
     var queueController;
 
-    const zoomValues = [32,64,128,256,512,1024];
+    const zoomValues = [32, 64, 128, 256, 512, 1024];
     var zoomValue = 512;
 
     function $id(id) {
@@ -432,30 +456,65 @@
         row.setAttribute(`id`, rowId);
         row.classList.add(`dataset-row`);
         row.classList.add(i % 2 ? `even` : `odd`);
-
+        // row number & image name
         const numberCell = document.createElement(`td`);
         numberCell.innerText = `${++i} — ${file.name}`;
         const numberCellLineBreak = document.createElement(`br`);
         numberCell.appendChild(numberCellLineBreak);
+        // image size
+        const imgSizeEl = document.createElement(`p`);
+        const imgHeightId = `height-${String(i).padStart(4, `0`)}`;
+        const imgWidthId = `width-${String(i).padStart(4, `0`)}`;
+        {
+          const imgWidthEl = document.createElement(`span`);
+          imgWidthEl.setAttribute(`id`, imgWidthId);
+          imgSizeEl.appendChild(imgWidthEl);
+          const imgSizeXEl = document.createElement(`span`);
+          imgSizeXEl.innerText = ` x `;
+          imgSizeEl.appendChild(imgSizeXEl);
+          const imgHeightEl = document.createElement(`span`);
+          imgHeightEl.setAttribute(`id`, imgHeightId);
+          imgSizeEl.appendChild(imgHeightEl);
+        }
+        numberCell.appendChild(imgSizeEl);
+        // image size quality
+        const imgSizeQualityId = `sizepill-${String(i).padStart(4, `0`)}`;
+        const imgSizeQualityEl = document.createElement(`p`);
+        imgSizeQualityEl.setAttribute(`id`, imgSizeQualityId);
+        numberCell.append(imgSizeQualityEl);
+        // remove button
         const removeButton = document.createElement(`button`);
         removeButton.setAttribute(`data-target`, rowId);
         removeButton.setAttribute(`data-name`, file.name);
         removeButton.innerText = `×`;
         removeButton.classList.add(`rmv-row-btn`);
         numberCell.appendChild(removeButton);
-
+        // image
         const imgCell = document.createElement(`td`);
         const img = document.createElement(`img`);
         img.setAttribute(`width`, String(zoomValue));
         img.setAttribute(`src`, await getImgUrl(file.filename));
-        imgCell.appendChild(img);
+        img.addEventListener(`load`, (event) => {
+          document.getElementById(imgWidthId).innerText = event.target.naturalWidth;
+          document.getElementById(imgHeightId).innerText = event.target.naturalHeight;
 
+          const pill = document.createElement(`span`);
+          let quality = ((event.target.naturalWidth > 1024 ? 1 : 0) + 
+          (event.target.naturalHeight > 1024 ? 1 : 0 ));
+          quality = quality > 1 ? `good` : quality > 0 ? `okay` : `bad`;
+          pill.innerText = quality;
+          pill.classList.add(`pill-${quality}`);
+          document.getElementById(imgSizeQualityId).innerHTML = ``;
+          document.getElementById(imgSizeQualityId).append(pill);
+        });
+        imgCell.appendChild(img);
+        // prompt
         const tagCell = document.createElement(`td`);
         const descriptionField = document.createElement(`textarea`);
         // descriptionField.setAttribute(`value`, file.description);
         descriptionField.setAttribute(`data-name`, file.name);
         descriptionField.setAttribute(`id`, `field-${file.name}`);
-        descriptionField.setAttribute(`style`, `width: ${zoomValue}px; min-height: ${zoomValue/2}px`);
+        descriptionField.setAttribute(`style`, `width: ${zoomValue}px; min-height: ${zoomValue / 2}px`);
         descriptionField.setAttribute(`rows`, 20);
         descriptionField.textContent = file.description || ``;
         tagCell.appendChild(descriptionField);
@@ -581,8 +640,8 @@
       const tgt = $id(DOM_IDS.snackbar);
       tgt.className = tgt.className.replace("show", "");
     }
-    
-    function toggleGuiModal(){
+
+    function toggleGuiModal() {
       const dialog = $id(DOM_IDS.guiOptions);
       dialog.classList.add(`open-dialog`);
       dialog.showModal();
@@ -598,7 +657,7 @@
       zoomValue = zoomValues[parseInt(e.target.value)];
       $id(DOM_IDS.optionZoomSizeViewer).innerText = `${zoomValue}px`;
       const applyStyle = (el) => {
-        el.setAttribute(`style`,`width: ${zoomValue}px;`);
+        el.setAttribute(`style`, `width: ${zoomValue}px;`);
       };
       document.querySelectorAll(`#${DOM_IDS.datasetBody} img`).forEach(applyStyle);
       document.querySelectorAll(`#${DOM_IDS.datasetBody} textarea`).forEach(applyStyle);
