@@ -1,4 +1,3 @@
-
 const IMAGE_EXTENSIONS = [`jpg`, `jpeg`, `png`];
 const DOM_IDS = {
   datasetBody: `dataset-body`,
@@ -19,7 +18,17 @@ const DOM_IDS = {
   snackbarText: `snackbar-text`,
 };
 /**
- * @type {{[key:string]:keyof HTMLElementEventType}}
+ * @type {{[key:string]:(string,...args:string[])=>string}}
+ */
+const rowIdsMaker = {
+  imageHeight: (stringI) => `height-${stringI}`,
+  imageWidth: (stringI) => `width-${stringI}`,
+  imageSizeQuality: (stringI) => `sizepill-${stringI}`,
+  magickTexarea: (stringI) => `magick-${stringI}`,
+  promptField: (filename) => `field-${filename}`,
+};
+/**
+ * @type {{[key:string]:keyof HTMLElementEventMap}}
  */
 const DOM_EVENTS = {
   change: `change`,
@@ -33,9 +42,9 @@ var dirH;
  * @property {String} [filename]
  * @property {String} name
  * @property {String} [ext]
- * @property {Number} width
- * @property {Number} height
- * @property {String} description
+ * @property {Number} [width]
+ * @property {Number} [height]
+ * @property {String} [description]
  */
 /** @type {FileObject} */
 const sampleFile = {
@@ -54,7 +63,7 @@ var fileLookupTable = new Map();
 var updateQueue = [];
 /** @type{Set<string,string>} */
 var updateQueued = new Set();
-/** @type{null|Promise<void>} */
+/** @type{null|Promise<void>|number} */
 var queueController;
 
 const zoomValues = [32, 64, 128, 256, 512, 1024];
@@ -80,18 +89,27 @@ function $cl(className) {
 }
 /**
  * Shorthand for addEventListener
- * @param{String|HTMLELement} idOrEl
- * @param{keyof HTMLElementEventType} eventName
- * @param{Function} cb
+ * @param{String|HTMLElement} idOrEl
+ * @param{keyof HTMLElementEventMap} eventName
+ * @param{(this: HTMLElement, ev: HTMLElementEventMap[keyof HTMLElementEventMap]) => any} cb
  */
 function $on(idOrEl, eventName, cb) {
+  /** @type {HTMLElement} */
   let el;
-  if (idOrEl instanceof HTMLElement) el = idOrEl;
-  else if (typeof idOrEl !== `string` || !idOrEl?.length) throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'id' argument.`);
-  if (typeof eventName !== `string` || !eventName?.length) throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'eventName' argument.`);
-  if (!cb || !(cb instanceof Function)) throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a function 'cb' argument.`);
-  if (!el) el = $id(idOrEl);
-  if (!el) throw new Error(`Target element not found with id '${id}'.`);
+  if (idOrEl instanceof HTMLElement) {
+    el = idOrEl;
+  } else {
+    if (typeof idOrEl !== `string` || !idOrEl?.length)
+      throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'id' argument.`);
+    if (typeof eventName !== `string` || !eventName?.length)
+      throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'eventName' argument.`);
+    if (!el)
+      el = $id(idOrEl);
+    if (!el)
+      throw new Error(`Target element not found with id '${idOrEl}'.`);
+  }
+  if (!cb || !(cb instanceof Function))
+    throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a function 'cb' argument.`);
   el.addEventListener(eventName, cb);
 }
 
@@ -221,8 +239,8 @@ function initNewFile(name) {
 }
 /**
  * Returns the contents of a file as string
- * @param{FileSystemHandle} fileHandle
- * @returns{String}
+ * @param{FileSystemFileHandle} fileHandle
+ * @returns{Promise<String>}
  */
 async function dataFileToString(fileHandle) {
   const f = await fileHandle.getFile();
@@ -250,7 +268,7 @@ function displayDatasetInfo() {
   updateMissingDescCount();
 }
 function updateMissingDescCount() {
-  $id(DOM_IDS.datasetInfoMissingCount).innerText = getMissingDescCount();
+  $id(DOM_IDS.datasetInfoMissingCount).innerText = String(getMissingDescCount());
 }
 async function generateTable() {
   const tbody = $id(DOM_IDS.datasetBody);
@@ -274,44 +292,25 @@ async function generateTable() {
     numberCell.appendChild(createImageSizeElement(stringI));
     // image magick
     const magickTextAreaEl = document.createElement(`pre`);
-    magickTextAreaEl.setAttribute(`id`, `magick-${stringI}`);
+    magickTextAreaEl.setAttribute(`id`, rowIdsMaker.magickTexarea(stringI));
     numberCell.appendChild(magickTextAreaEl);
     // image size quality
-    const imgSizeQualityId = `sizepill-${stringI}`;
     const imgSizeQualityEl = document.createElement(`p`);
-    imgSizeQualityEl.setAttribute(`id`, imgSizeQualityId);
+    imgSizeQualityEl.setAttribute(`id`, rowIdsMaker.imageSizeQuality(stringI));
     numberCell.append(imgSizeQualityEl);
     // remove button
-    const removeButton = document.createElement(`button`);
-    removeButton.setAttribute(`data-target`, rowId);
-    removeButton.setAttribute(`data-name`, file.name);
-    removeButton.innerText = `×`;
-    removeButton.classList.add(`rmv-row-btn`);
     numberCell.appendChild(createImageRemoveButton(rowId, file));
     // image
     const imgCell = document.createElement(`td`);
-    const img = document.createElement(`img`);
-    img.setAttribute(`width`, String(zoomValue));
-    img.setAttribute(`src`, await getImgUrl(file.filename));
-    img.setAttribute(`data-filename`, file.filename);
-    img.addEventListener(`load`, (event) => {
-      document.getElementById(imgWidthId).innerText = event.target.naturalWidth;
-      document.getElementById(imgHeightId).innerText = event.target.naturalHeight;
-
-      document.getElementById(imgSizeQualityId).innerHTML = ``;
-      document.getElementById(imgSizeQualityId).append(createImageQualityPill(event.target.naturalHeight, event.target.naturalHeight));
-
-      testAddMagickExtentToTextArea(stringI, event.target.dataset.filename, event.target.naturalWidth, event.target.naturalHeight)
-    });
-    imgCell.appendChild(img);
+    imgCell.appendChild(await createImageElement(stringI, file));
     // prompt
     const tagCell = document.createElement(`td`);
     const descriptionField = document.createElement(`textarea`);
     // descriptionField.setAttribute(`value`, file.description);
     descriptionField.setAttribute(`data-name`, file.name);
-    descriptionField.setAttribute(`id`, `field-${file.name}`);
+    descriptionField.setAttribute(`id`, rowIdsMaker.promptField(file.name));
     descriptionField.setAttribute(`style`, `width: ${zoomValue}px; min-height: ${zoomValue / 2}px`);
-    descriptionField.setAttribute(`rows`, 20);
+    descriptionField.setAttribute(`rows`, `20`);
     descriptionField.textContent = file.description || ``;
     tagCell.appendChild(descriptionField);
 
@@ -320,7 +319,6 @@ async function generateTable() {
     row.appendChild(tagCell);
     tbody.appendChild(row);
     $on(descriptionField, DOM_EVENTS.change, queueChange);
-    $on(removeButton, DOM_EVENTS.click, handleImageRemove);
   }
 }
 function resetTable() {
@@ -373,8 +371,8 @@ async function saveNextChange() {
     showErrorToast(`File not found for field ${name}`, `Saver`);
     throw new Error(`File not found for field ${name}`);
   }
-  const newVal = $id(`field-${name}`).value.trim();
-  if (newVal !== file.description); {
+  const newVal = /** @type{HTMLTextAreaElement} */ ($id(rowIdsMaker.promptField(name))).value.trim();
+  if (newVal !== file.description) {
     await writeFile(`${file.name}.txt`, newVal);
     file.description = newVal;
   }
@@ -431,7 +429,7 @@ async function handleImageRemove(e) {
   files = files.filter(f => f.name !== name);
   // Dataset update
   if (deleteResult.deletedImage)
-    updateImageCounter(files.length);
+    updateImageCounter();
   if (!deleteResult.deletedTag)
     updateImageCounter();
   // DOM update
@@ -452,6 +450,7 @@ function removeTableRow(rowId) {
 async function removeFile(filename) {
   const srcFileHandle = await dirH.getFileHandle(filename);
   const delDirH = await getTrashDirectoryH();
+  // @ts-ignore // .move exists on chrome
   await srcFileHandle.move(delDirH, filename);
 }
 /**
@@ -497,14 +496,14 @@ function closeErrorToast() {
 }
 
 function toggleGuiModal() {
-  const dialog = $id(DOM_IDS.guiOptions);
+  const dialog = /** @type{HTMLDialogElement} */ ($id(DOM_IDS.guiOptions));
   dialog.classList.add(`open-dialog`);
   dialog.showModal();
 }
 function closeGuiModal() {
-  const dialog = $id(DOM_IDS.guiOptions);
+  const dialog = /** @type{HTMLDialogElement} */ ($id(DOM_IDS.guiOptions));
   dialog.classList.remove(`open-dialog`);
-  $id(DOM_IDS.guiOptions).close();
+  dialog.close();
 }
 
 $on(DOM_IDS.optionZoomSize, DOM_EVENTS.change, applyZoom);
@@ -543,8 +542,8 @@ function createMagickCropCmd(imgName, width, height, gravity = `center`) {
  */
 function testAddMagickExtentToTextArea(stringI, imgName, width, height) {
   const el = document.getElementById(`magick-${stringI}`);
-  el.setAttribute(`data-width`, width);
-  el.setAttribute(`data-height`, height);
+  el.setAttribute(`data-width`, String(width));
+  el.setAttribute(`data-height`, String(height));
   el.setAttribute(`data-image`, imgName);
   el.innerText = el.innerText + `\n\n` +
     createBackupCmd(imgName) + `\n\n` +
@@ -593,4 +592,53 @@ function createImageSizeElement(stringI) {
   imgSizeEl.appendChild(imgHeightEl);
 
   return imgSizeEl;
+}
+
+/**
+ * Creates button de remove image
+ * @param {String} rowId Table row html id
+ * @param {FileObject} file 
+ */
+function createImageRemoveButton(rowId, file) {
+  const removeButton = document.createElement(`button`);
+  removeButton.setAttribute(`data-target`, rowId);
+  removeButton.setAttribute(`data-name`, file.name);
+  removeButton.innerText = `×`;
+  removeButton.classList.add(`rmv-row-btn`);
+  $on(removeButton, DOM_EVENTS.click, handleImageRemove);
+  return removeButton;
+}
+/**
+ * 
+ * @param {String} stringI 
+ * @returns {(this: HTMLElement, ev: HTMLElementEventMap[keyof HTMLElementEventMap]) => any}
+ */
+function DoAfterImageLoads(stringI) {
+  return (
+    /**   
+     * @type {(event:Event & {target: HTMLImageElement})=>void}
+     */
+    (event) => {
+      document.getElementById(rowIdsMaker.imageWidth(stringI)).innerText = String(event.target.naturalWidth);
+      document.getElementById(rowIdsMaker.imageHeight(stringI)).innerText = String(event.target.naturalHeight);
+      const imgSizeQualityId = rowIdsMaker.imageSizeQuality(stringI);
+      document.getElementById(imgSizeQualityId).innerHTML = ``;
+      document.getElementById(imgSizeQualityId).append(createImageQualityPill(event.target.naturalHeight, event.target.naturalHeight));
+
+      testAddMagickExtentToTextArea(stringI, event.target.dataset.filename, event.target.naturalWidth, event.target.naturalHeight)
+    });
+}
+
+/**
+ * 
+ * @param {string} stringI 
+ * @param {FileObject} file 
+ */
+async function createImageElement(stringI, file) {
+  const img = document.createElement(`img`);
+  img.setAttribute(`width`, String(zoomValue));
+  img.setAttribute(`src`, await getImgUrl(file.filename));
+  img.setAttribute(`data-filename`, file.filename);
+  img.addEventListener(`load`, DoAfterImageLoads(stringI));
+  return img;
 }
