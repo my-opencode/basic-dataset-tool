@@ -1,6 +1,6 @@
 # Extremely basic Dataset Tagging Tool
 
-> Version 0.4.0 
+> Version 0.5.0 
 
 ## Description
 
@@ -90,6 +90,11 @@ V0.3.0 adds two minor features:
 MIT
 
 ## Changes
+
+### Version 0.5.0
+
+- Companion node.js script to rename files
+- Companion node.js script to revert rename files
 
 ### Version 0.4.0
 
