@@ -44,52 +44,6 @@ const DOM_EVENTS = {
   click: `click`,
 };
 
-// DOM Helpers
-
-/**
- * Shorthand for getElementById
- * @param{String} id
- */
-function $id(id) {
-  if (typeof id !== `string` || !id?.length)
-    throw new TypeError(`function $id(id:string) requires a string argument.`);
-  return document.getElementById(id);
-}
-/**
- * Shorthand for getElementsByClassName
- * @param{String} className
- */
-function $cl(className) {
-  if (typeof className !== `string` || !className?.length)
-    throw new TypeError(`function $cl(className:string) requires a string argument.`);
-  return document.getElementsByClassName(className);
-}
-/**
- * Shorthand for addEventListener
- * @param{String|HTMLElement} idOrEl
- * @param{keyof HTMLElementEventMap} eventName
- * @param{(this: HTMLElement, ev: HTMLElementEventMap[keyof HTMLElementEventMap]) => any} cb
- */
-function $on(idOrEl, eventName, cb) {
-  /** @type {HTMLElement} */
-  let el;
-  if (idOrEl instanceof HTMLElement) {
-    el = idOrEl;
-  } else {
-    if (typeof idOrEl !== `string` || !idOrEl?.length)
-      throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'id' argument.`);
-    if (typeof eventName !== `string` || !eventName?.length)
-      throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'eventName' argument.`);
-    if (!el)
-      el = $id(idOrEl);
-    if (!el)
-      throw new Error(`Target element not found with id '${idOrEl}'.`);
-  }
-  if (!cb || !(cb instanceof Function))
-    throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a function 'cb' argument.`);
-  el.addEventListener(eventName, cb);
-}
-
 // File system state
 
 /**
@@ -719,6 +673,52 @@ async function createImageElement(stringI, file) {
   img.setAttribute(`data-filename`, file.filename);
   img.addEventListener(`load`, DoAfterImageLoads(stringI));
   return img;
+}
+
+// DOM Helpers
+
+/**
+ * Shorthand for getElementById
+ * @param{String} id
+ */
+function $id(id) {
+  if (typeof id !== `string` || !id?.length)
+    throw new TypeError(`function $id(id:string) requires a string argument.`);
+  return document.getElementById(id);
+}
+/**
+ * Shorthand for getElementsByClassName
+ * @param{String} className
+ */
+function $cl(className) {
+  if (typeof className !== `string` || !className?.length)
+    throw new TypeError(`function $cl(className:string) requires a string argument.`);
+  return document.getElementsByClassName(className);
+}
+/**
+ * Shorthand for addEventListener
+ * @param{String|HTMLElement} idOrEl
+ * @param{keyof HTMLElementEventMap} eventName
+ * @param{(this: HTMLElement, ev: HTMLElementEventMap[keyof HTMLElementEventMap]) => any} cb
+ */
+function $on(idOrEl, eventName, cb) {
+  /** @type {HTMLElement} */
+  let el;
+  if (idOrEl instanceof HTMLElement) {
+    el = idOrEl;
+  } else {
+    if (typeof idOrEl !== `string` || !idOrEl?.length)
+      throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'id' argument.`);
+    if (typeof eventName !== `string` || !eventName?.length)
+      throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a string 'eventName' argument.`);
+    if (!el)
+      el = $id(idOrEl);
+    if (!el)
+      throw new Error(`Target element not found with id '${idOrEl}'.`);
+  }
+  if (!cb || !(cb instanceof Function))
+    throw new TypeError(`function $on(id:string, eventName:string, cb:()=>any) requires a function 'cb' argument.`);
+  el.addEventListener(eventName, cb);
 }
 
 // Image Magick 7 command generators
