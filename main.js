@@ -474,49 +474,22 @@ async function generateTable() {
   let i = 0;
   const padlength = String(files.length).length;
   for (const file of files) {
-    const rowId = `row_${i}`;
-    i++;
+    const rowId = `row_${++i}`;
     const stringI = String(i).padStart(padlength, `0`);
+
     const row = document.createElement(`tr`);
     row.setAttribute(`id`, rowId);
     row.classList.add(`dataset-row`);
     row.classList.add(i % 2 ? `even` : `odd`);
-    // row number & image name
-    const numberCell = document.createElement(`td`);
-    numberCell.innerText = `${stringI} — ${file.name}`;
-    const numberCellLineBreak = document.createElement(`br`);
-    numberCell.appendChild(numberCellLineBreak);
-    // image size
-    numberCell.appendChild(createImageSizeElement(stringI));
-    // image magick
-    const magickTextAreaEl = document.createElement(`pre`);
-    magickTextAreaEl.setAttribute(`id`, rowIdsMaker.magickTexarea(stringI));
-    numberCell.appendChild(magickTextAreaEl);
-    // image size quality
-    const imgSizeQualityEl = document.createElement(`p`);
-    imgSizeQualityEl.setAttribute(`id`, rowIdsMaker.imageSizeQuality(stringI));
-    numberCell.append(imgSizeQualityEl);
-    // remove button
-    numberCell.appendChild(createImageRemoveButton(rowId, file));
-    // image
-    const imgCell = document.createElement(`td`);
-    imgCell.appendChild(await createImageElement(stringI, file));
-    // prompt
-    const tagCell = document.createElement(`td`);
-    const descriptionField = document.createElement(`textarea`);
-    // descriptionField.setAttribute(`value`, file.description);
-    descriptionField.setAttribute(`data-name`, file.name);
-    descriptionField.setAttribute(`id`, rowIdsMaker.promptField(file.name));
-    descriptionField.setAttribute(`style`, `width: ${zoomValue}px; min-height: ${zoomValue / 2}px`);
-    descriptionField.setAttribute(`rows`, `20`);
-    descriptionField.textContent = file.description || ``;
-    tagCell.appendChild(descriptionField);
 
-    row.appendChild(numberCell);
-    row.appendChild(imgCell);
-    row.appendChild(tagCell);
+    // row number & image name   
+    row.appendChild(createInformationTableCell(rowId, stringI, file));
+    // image
+    row.appendChild(await createImageTableCell(rowId, stringI, file));
+    // prompt
+    row.appendChild(createImagePromptTableCell(rowId, stringI, file));
+
     tbody.appendChild(row);
-    $on(descriptionField, DOM_EVENTS.change, queueChange);
   }
 }
 /**
@@ -673,6 +646,64 @@ async function createImageElement(stringI, file) {
   img.setAttribute(`data-filename`, file.filename);
   img.addEventListener(`load`, DoAfterImageLoads(stringI));
   return img;
+}
+/**
+ * Creates the table cell for the prompt of an image row.
+ * @param {String} rowId
+ * @param {String} stringI 
+ * @param {FileObject} file 
+ * @returns {HTMLTableCellElement}
+ */
+function createImagePromptTableCell(rowId, stringI, file) {
+  const tagCell = document.createElement(`td`);
+  const descriptionField = document.createElement(`textarea`);
+  // descriptionField.setAttribute(`value`, file.description);
+  descriptionField.setAttribute(`data-name`, file.name);
+  descriptionField.setAttribute(`id`, rowIdsMaker.promptField(file.name));
+  descriptionField.setAttribute(`style`, `width: ${zoomValue}px; min-height: ${zoomValue / 2}px`);
+  descriptionField.setAttribute(`rows`, `20`);
+  descriptionField.textContent = file.description || ``;
+  tagCell.appendChild(descriptionField);
+  $on(descriptionField, DOM_EVENTS.change, queueChange);
+  return tagCell;
+}
+/**
+ * Creates the table cell for the image.
+ * @param {String} rowId
+ * @param {string} stringI 
+ * @param {FileObject} file 
+ * @returns {Promise<HTMLTableCellElement>}
+ */
+async function createImageTableCell(rowId, stringI, file) {
+  const imgCell = document.createElement(`td`);
+  imgCell.appendChild(await createImageElement(stringI, file));
+  return imgCell;
+}
+/**
+ * Creates the table cell for the image information and controls
+ * @param {String} rowId 
+ * @param {String} stringI 
+ * @param {FileObject} file 
+ * @returns {HTMLTableCellElement}
+ */
+function createInformationTableCell(rowId, stringI, file) {
+  const numberCell = document.createElement(`td`);
+  numberCell.innerText = `${stringI} — ${file.name}`;
+  const numberCellLineBreak = document.createElement(`br`);
+  numberCell.appendChild(numberCellLineBreak);
+  // image size
+  numberCell.appendChild(createImageSizeElement(stringI));
+  // image magick
+  const magickTextAreaEl = document.createElement(`pre`);
+  magickTextAreaEl.setAttribute(`id`, rowIdsMaker.magickTexarea(stringI));
+  numberCell.appendChild(magickTextAreaEl);
+  // image size quality
+  const imgSizeQualityEl = document.createElement(`p`);
+  imgSizeQualityEl.setAttribute(`id`, rowIdsMaker.imageSizeQuality(stringI));
+  numberCell.append(imgSizeQualityEl);
+  // remove button
+  numberCell.appendChild(createImageRemoveButton(rowId, file));
+  return numberCell;
 }
 
 // DOM Helpers
