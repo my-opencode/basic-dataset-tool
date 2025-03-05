@@ -1,6 +1,6 @@
 # Extremely basic Dataset Tagging Tool
 
-> Version 0.3.0 
+> Version 0.4.0 
 
 ## Description
 
@@ -90,6 +90,10 @@ V0.3.0 adds two minor features:
 MIT
 
 ## Changes
+
+### Version 0.4.0
+
+- Image magick commands
 
 ### Version 0.3.0
 

@@ -2,6 +2,17 @@
 
 /** Image extensions to find in the file system directory */
 const IMAGE_EXTENSIONS = [`jpg`, `jpeg`, `png`];
+/**
+ * @typedef ImageMagickGravity
+ * @type {"NorthWest"|"North"|"NorthEast"|"West"|"Center"|"East"|"SouthWest"|"South"|"SouthEast"}
+ */
+/** 
+ * Image Magick gravity values 
+ * @type {ImageMagickGravity[]}
+ */
+const IMAGEMAGICK_GRAVITY = [
+  "NorthWest", "North", "NorthEast", "West", "Center", "East", "SouthWest", "South", "SouthEast"
+];
 
 // DOM dictionaries
 
@@ -23,6 +34,7 @@ const DOM_IDS = {
   snackbarService: `snackbar-service`,
   snackbarTime: `snackbar-time`,
   snackbarText: `snackbar-text`,
+  downloadImageMagickCommands: `download-imagemagick-commands`,
 };
 /**
  * Variable DOM element ids
@@ -32,8 +44,19 @@ const rowIdsMaker = {
   imageHeight: (stringI) => `height-${stringI}`,
   imageWidth: (stringI) => `width-${stringI}`,
   imageSizeQuality: (stringI) => `sizepill-${stringI}`,
-  magickTexarea: (stringI) => `magick-${stringI}`,
   promptField: (filename) => `field-${filename}`,
+  magickDiv: (stringI) => `magick-${stringI}`,
+  magickCopyPre: (stringI) => `magick-copy-pre-${stringI}`,
+  magickCropCbox: (stringI) => `magick-crop-${stringI}`,
+  magickCropLabel: (stringI) => `magick-crop-label-${stringI}`,
+  magickCropGravity: (stringI) => `magick-crop-gravity-${stringI}`,
+  magickCropPre: (stringI) => `magick-crop-pre-${stringI}`,
+  magickExtendCbox: (stringI) => `magick-extend-${stringI}`,
+  magickExtendLabel: (stringI) => `magick-extend-label-${stringI}`,
+  magickExtendPre: (stringI) => `magick-extend-pre-${stringI}`,
+  magickResizeCbox: (stringI) => `magick-resize-${stringI}`,
+  magickResizeLabel: (stringI) => `magick-resize-label-${stringI}`,
+  magickResizePre: (stringI) => `magick-resize-pre-${stringI}`,
 };
 /**
  * Supported DOM event types
@@ -43,6 +66,13 @@ const DOM_EVENTS = {
   change: `change`,
   click: `click`,
 };
+/** Known DOM classes */
+const DOM_CLASSES = {
+  displayNone: `display-none`,
+  commandEnabled: `command-enabled`,
+  noMarginTop: `mt-0`,
+  noPaddingTop: `pt-0`,
+}
 
 // File system state
 
@@ -131,6 +161,10 @@ $on(DOM_IDS.guiOptionsCLose, DOM_EVENTS.click, closeGuiModal);
  * listen to change in the zoom size option
  */
 $on(DOM_IDS.optionZoomSize, DOM_EVENTS.change, applyZoom);
+/**
+ * Download the image magick commands
+ */
+$on(DOM_IDS.downloadImageMagickCommands, DOM_EVENTS.click, downloadMagickCommands);
 
 // EntryPoints
 
@@ -573,8 +607,96 @@ function DoAfterImageLoads(stringI) {
       document.getElementById(imgSizeQualityId).innerHTML = ``;
       document.getElementById(imgSizeQualityId).append(createImageQualityPill(event.target.naturalHeight, event.target.naturalHeight));
 
-      testAddMagickExtentToTextArea(stringI, event.target.dataset.filename, event.target.naturalWidth, event.target.naturalHeight)
+      updateMagickCommandsAfterImageLoad(stringI, event.target.dataset.filename, event.target.naturalWidth, event.target.naturalHeight);
     });
+}
+/**
+ * Generates the event callback function to handle a magick check box update
+ * @param {String} stringI 
+ * @returns {(e:Event & {target: HTMLInputElement})=>void}
+ */
+function UpdateMagickCommandSelection(stringI) {
+  return /** @type {(e:Event & {target: HTMLInputElement})=>void} */ function updateMagickCommands(e) {
+
+    const cropEl = /** @type {HTMLInputElement} */($id(rowIdsMaker.magickCropCbox(stringI)));
+    const extendEl =/** @type {HTMLInputElement} */ ($id(rowIdsMaker.magickExtendCbox(stringI)));
+    const resizeEl =/** @type {HTMLInputElement} */ ($id(rowIdsMaker.magickResizeCbox(stringI)));
+
+    if (cropEl.checked || extendEl.checked || resizeEl.checked) {
+      $id(rowIdsMaker.magickCopyPre(stringI)).classList.remove(DOM_CLASSES.displayNone);
+      $id(rowIdsMaker.magickCopyPre(stringI)).classList.add(DOM_CLASSES.commandEnabled);
+    } else {
+      $id(rowIdsMaker.magickCopyPre(stringI)).classList.add(DOM_CLASSES.displayNone);
+      $id(rowIdsMaker.magickCopyPre(stringI)).classList.remove(DOM_CLASSES.commandEnabled);
+    }
+
+    if (cropEl.checked) {
+      $id(rowIdsMaker.magickCropPre(stringI)).classList.remove(DOM_CLASSES.displayNone);
+      $id(rowIdsMaker.magickCropPre(stringI)).classList.add(DOM_CLASSES.commandEnabled);
+    } else {
+      $id(rowIdsMaker.magickCropPre(stringI)).classList.add(DOM_CLASSES.displayNone);
+      $id(rowIdsMaker.magickCropPre(stringI)).classList.remove(DOM_CLASSES.commandEnabled);
+    }
+
+    if (extendEl.checked) {
+      $id(rowIdsMaker.magickExtendPre(stringI)).classList.remove(DOM_CLASSES.displayNone);
+      $id(rowIdsMaker.magickExtendPre(stringI)).classList.add(DOM_CLASSES.commandEnabled);
+    } else {
+      $id(rowIdsMaker.magickExtendPre(stringI)).classList.add(DOM_CLASSES.displayNone);
+      $id(rowIdsMaker.magickExtendPre(stringI)).classList.remove(DOM_CLASSES.commandEnabled);
+    }
+
+    if (resizeEl.checked) {
+      $id(rowIdsMaker.magickResizePre(stringI)).classList.remove(DOM_CLASSES.displayNone);
+      $id(rowIdsMaker.magickResizePre(stringI)).classList.add(DOM_CLASSES.commandEnabled);
+    } else {
+      $id(rowIdsMaker.magickResizePre(stringI)).classList.add(DOM_CLASSES.displayNone);
+      $id(rowIdsMaker.magickResizePre(stringI)).classList.remove(DOM_CLASSES.commandEnabled);
+    }
+  };
+}
+/**
+ * For testing purposes. Writes attributes and contents to the textarea for imagemagick commands.
+ * @param {String} stringI The padded index of the image in the array
+ * @param {String} imgName The file name of the image
+ * @param {Number} width
+ * @param {Number} height
+ */
+function updateMagickCommandsAfterImageLoad(stringI, imgName, width, height) {
+  if (width === 1024 && height === 1024) return;
+  if (width === height && width < 1024) return;
+
+  const enableCrop = width !== height && width >= 1024 && height >= 1024;
+  const enableExtend = width !== height;
+  const enableResize = width >= 1024 || height >= 1024
+
+  const el = document.getElementById(rowIdsMaker.magickDiv(stringI));
+  el.setAttribute(`data-width`, String(width));
+  el.setAttribute(`data-height`, String(height));
+  el.setAttribute(`data-image`, imgName);
+
+  if (enableCrop || enableExtend || enableResize) {
+    $id(rowIdsMaker.magickCopyPre(stringI)).innerText = createBackupCmd(imgName);
+  }
+
+  if (enableCrop) {
+    $id(rowIdsMaker.magickCropPre(stringI)).innerText = createMagickCropCmd(imgName, width, height);
+    $id(rowIdsMaker.magickCropCbox(stringI)).removeAttribute(`disabled`);
+    $id(rowIdsMaker.magickCropLabel(stringI)).classList.remove(`disabled`);
+    $id(rowIdsMaker.magickCropGravity(stringI)).classList.remove(DOM_CLASSES.displayNone);
+  }
+
+  if (enableExtend) {
+    $id(rowIdsMaker.magickExtendPre(stringI)).innerText = createMagickExtentWhiteCmd(imgName, width, height);
+    $id(rowIdsMaker.magickExtendCbox(stringI)).removeAttribute(`disabled`);
+    $id(rowIdsMaker.magickExtendLabel(stringI)).classList.remove(`disabled`);
+  }
+
+  if (enableResize) {
+    $id(rowIdsMaker.magickResizePre(stringI)).innerText = createMagickResizeCmd(imgName, width, height);
+    $id(rowIdsMaker.magickResizeCbox(stringI)).removeAttribute(`disabled`);
+    $id(rowIdsMaker.magickResizeLabel(stringI)).classList.remove(`disabled`);
+  }
 }
 
 // DOM element generators ≈ Front end modules
@@ -648,6 +770,89 @@ async function createImageElement(stringI, file) {
   return img;
 }
 /**
+ * Creates the select element to choose the Image Magick gravity
+ * @param {HTMLElement} divEl 
+ * @param {String} stringI 
+ * @returns {HTMLSelectElement}
+ */
+function createCropGravitySelect(divEl, stringI) {
+  const gravitySel = document.createElement(`select`);
+  gravitySel.setAttribute(`id`, rowIdsMaker.magickCropGravity(stringI));
+  gravitySel.classList.add(DOM_CLASSES.displayNone);
+  for (const gravity of IMAGEMAGICK_GRAVITY) {
+    const optEl = document.createElement(`option`);
+    optEl.setAttribute(`value`, gravity);
+    optEl.innerText = gravity;
+    if (gravity === `Center`) {
+      optEl.setAttribute(`selected`, `selected`);
+    }
+    gravitySel.appendChild(optEl);
+  }
+
+  $on(gravitySel, DOM_EVENTS.change, () => {
+    $id(rowIdsMaker.magickCropPre(stringI)).innerText = createMagickCropCmd(
+      divEl.dataset.image,
+      Number(divEl.dataset.width),
+      Number(divEl.dataset.height),
+      /** @type {ImageMagickGravity} */(gravitySel.options[gravitySel.selectedIndex].value)
+    );
+  });
+
+  return gravitySel;
+}
+/**
+ * Creates the Image Magick controls
+ * @param {String} rowI 
+ * @param {String} stringI 
+ * @returns {HTMLElement}
+ */
+function createImageMagickControls(rowI, stringI) {
+  const divEl = document.createElement(`div`);
+  divEl.setAttribute(`id`, rowIdsMaker.magickDiv(stringI));
+
+  /** @type {HTMLPreElement[]} */
+  const pres = [];
+  const preCopyEl = document.createElement(`pre`);
+  preCopyEl.setAttribute(`id`, rowIdsMaker.magickCopyPre(stringI));
+  pres.push(preCopyEl);
+
+  for (const dataValueName of [`crop`, `extend`, `resize`]) {
+    const cappedDataValueName = dataValueName.slice(0, 1).toUpperCase() + dataValueName.slice(1);
+    const forValue = rowIdsMaker[`magick${cappedDataValueName}Cbox`](stringI);
+
+    const cboxEl = document.createElement(`input`);
+    cboxEl.setAttribute(`name`, forValue);
+    cboxEl.setAttribute(`id`, forValue);
+    cboxEl.setAttribute(`type`, `checkbox`);
+    cboxEl.setAttribute(`disabled`, `disabled`);
+
+    const labelEl = document.createElement(`label`);
+    labelEl.setAttribute(`for`, forValue);
+    labelEl.setAttribute(`id`, rowIdsMaker[`magick${cappedDataValueName}Label`](stringI));
+    labelEl.classList.add(`disabled`);
+    labelEl.innerText = dataValueName;
+
+    divEl.appendChild(labelEl);
+    divEl.appendChild(cboxEl);
+
+    $on(cboxEl, DOM_EVENTS.change, UpdateMagickCommandSelection(stringI));
+
+    if (dataValueName === `crop`) {
+      divEl.appendChild(createCropGravitySelect(divEl, stringI));
+    }
+
+    const preEl = document.createElement(`pre`);
+    preEl.setAttribute(`id`, rowIdsMaker[`magick${cappedDataValueName}Pre`](stringI));
+    pres.push(preEl);
+  }
+
+  for (const preEl of pres) {
+    preEl.classList.add(DOM_CLASSES.displayNone);
+    divEl.append(preEl);
+  }
+  return divEl;
+}
+/**
  * Creates the table cell for the prompt of an image row.
  * @param {String} rowId
  * @param {String} stringI 
@@ -688,19 +893,24 @@ async function createImageTableCell(rowId, stringI, file) {
  */
 function createInformationTableCell(rowId, stringI, file) {
   const numberCell = document.createElement(`td`);
-  numberCell.innerText = `${stringI} — ${file.name}`;
-  const numberCellLineBreak = document.createElement(`br`);
-  numberCell.appendChild(numberCellLineBreak);
+  // index and name
+  const indexAndNameEl = document.createElement(`p`);
+  indexAndNameEl.innerText = `${stringI} — ${file.name}`;
+  indexAndNameEl.classList.add(DOM_CLASSES.noPaddingTop);
+  indexAndNameEl.classList.add(DOM_CLASSES.noMarginTop);
+  numberCell.appendChild(indexAndNameEl);
+  // const numberCellLineBreak = document.createElement(`br`);
+  // numberCell.appendChild(numberCellLineBreak);
   // image size
   numberCell.appendChild(createImageSizeElement(stringI));
-  // image magick
-  const magickTextAreaEl = document.createElement(`pre`);
-  magickTextAreaEl.setAttribute(`id`, rowIdsMaker.magickTexarea(stringI));
-  numberCell.appendChild(magickTextAreaEl);
+
   // image size quality
   const imgSizeQualityEl = document.createElement(`p`);
   imgSizeQualityEl.setAttribute(`id`, rowIdsMaker.imageSizeQuality(stringI));
   numberCell.append(imgSizeQualityEl);
+
+  numberCell.appendChild(createImageMagickControls(rowId, stringI));
+
   // remove button
   numberCell.appendChild(createImageRemoveButton(rowId, file));
   return numberCell;
@@ -754,36 +964,65 @@ function $on(idOrEl, eventName, cb) {
 
 // Image Magick 7 command generators
 
+/**
+ * 
+ * @param {String} imgName 
+ * @returns {String}
+ */
 function createBackupCmd(imgName) {
   return `cp ${imgName} ${imgName}.bak;`;
 }
+/**
+ * 
+ * @param {String} imgName 
+ * @param {Number} width 
+ * @param {number} height 
+ * @returns {String}
+ */
 function createMagickExtentWhiteCmd(imgName, width, height) {
   const longerSideLength = Math.max(width, height);
-  return `magick ${imgName} -background white -gravity center -extent ${longerSideLength}x${longerSideLength} ${imgName};`;
+  return `magick ${imgName} -background white -gravity Center -extent ${longerSideLength}x${longerSideLength} ${imgName};`;
 }
+/**
+ * 
+ * @param {String} imgName 
+ * @param {Number} width 
+ * @param {Number} height 
+ * @returns {String}
+ */
 function createMagickResizeCmd(imgName, width, height) {
   const longerSideLength = Math.max(width, height);
   return `magick ${imgName} -resize ${1024}x${1024}\\> ${imgName};`;
 }
-function createMagickCropCmd(imgName, width, height, gravity = `center`) {
+/**
+ * 
+ * @param {String} imgName 
+ * @param {Number} width 
+ * @param {Number} height 
+ * @param {ImageMagickGravity} gravity 
+ * @returns {String}
+ */
+function createMagickCropCmd(imgName, width, height, gravity = `Center`) {
   const shorterSideLength = Math.min(width, height);
   return `magick ${imgName} -gravity ${gravity} -crop ${shorterSideLength}x${shorterSideLength}+0+0 +repage ${imgName};`;
 }
 /**
- * For testing purposes. Writes attributes and contents to the textarea for imagemagick commands.
- * @param {String} stringI The padded index of the image in the array
- * @param {String} imgName The file name of the image
- * @param {Number} width
- * @param {Number} height
+ * Triggers the download of all enabled imagemagick commands as a shell script file
  */
-function testAddMagickExtentToTextArea(stringI, imgName, width, height) {
-  const el = document.getElementById(`magick-${stringI}`);
-  el.setAttribute(`data-width`, String(width));
-  el.setAttribute(`data-height`, String(height));
-  el.setAttribute(`data-image`, imgName);
-  el.innerText = el.innerText + `\n\n` +
-    createBackupCmd(imgName) + `\n\n` +
-    ((width >= 1024 && height >= 1024 && width !== height) ? createMagickCropCmd(imgName, width, height) : ``) + `\n\n` +
-    (width !== height ? createMagickExtentWhiteCmd(imgName, width, height) : ``) + `\n\n` +
-    ((width >= 1024 || height >= 1024) ? createMagickResizeCmd(imgName, width, height) : ``);
+function downloadMagickCommands() {
+  let commands = ``;
+  // grab the commands from all enabled command text areas
+  const enabledCommandElements = /** @type {HTMLElement[]} */(Array.from(document.querySelectorAll(`pre.${DOM_CLASSES.commandEnabled}`)));
+  for (const el of enabledCommandElements) {
+    commands += el.innerText + `\n`;
+  }
+  // Download all commands as a shell file
+  const downloadLink = document.createElement('a');
+  downloadLink.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(commands));
+  downloadLink.setAttribute('download', `batchProcessImages.sh`);
+  downloadLink.style.display = 'none';
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  // Remove the download link
+  document.body.removeChild(downloadLink);
 }
