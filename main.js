@@ -258,6 +258,7 @@ async function listFilesInDirectory() {
         throw new Error(`Unable to read file ${name}. ${error?.message || String(error)}`);
     }
     }
+  files = files.filter(a => !!a.filename).sort((a, b) => a.name > b.name ? 1 : a.name < b.name ? -1 : 0);
 }
 
 // Computed state values
