@@ -2,6 +2,7 @@
 
 /** Image extensions to find in the file system directory */
 const IMAGE_EXTENSIONS = [`jpg`, `jpeg`, `png`];
+const FILE_EXTENSIONS_TO_OPEN = [...IMAGE_EXTENSIONS, `txt`];
 /**
  * @typedef ImageMagickGravity
  * @type {"NorthWest"|"North"|"NorthEast"|"West"|"Center"|"East"|"SouthWest"|"South"|"SouthEast"}
@@ -230,11 +231,20 @@ async function listFilesInDirectory() {
   if (dirH)
     for await (const handle of dirH.values()) {
       if (handle.kind !== `file`) continue;
-      const { name, ext } = fileNameToNameAndExt(handle.name);
-      if (!ext) continue;
+      let name = "", ext = "";
+      try {
+        ({ name, ext } = fileNameToNameAndExt(handle.name));
+      } catch (error) {
+        showErrorToast(`Unable to read file name of file ${String(handle)}`);
+        throw new Error(`Unable to read file name of ${String(handle)}`);
+      }
+      if (!name || !ext) continue;
       /** @type{String} */
       const extL = ext.toLowerCase();
-      if (!IMAGE_EXTENSIONS.includes(extL) && extL !== `txt`) continue;
+      if (!FILE_EXTENSIONS_TO_OPEN.includes(extL)) {
+        continue;
+      }
+      try {
       const file = initNewFile(name);
       if (extL === `txt`) {
         file.description = await readTextFileContents(handle);
@@ -243,8 +253,11 @@ async function listFilesInDirectory() {
         file.filename = handle.name;
         file.ext = ext;
       }
+      } catch (error) {
+        showErrorToast(`Unable to read file ${name}.`);
+        throw new Error(`Unable to read file ${name}. ${error?.message || String(error)}`);
     }
-  files = files.sort((a, b) => a.name > b.name ? 1 : a.name < b.name ? -1 : 0);
+    }
 }
 
 // Computed state values
@@ -324,15 +337,15 @@ async function saveNextChange() {
 
 /**
  * Splits the file name and file extension from the full file name
- * @param {String} fileName
+ * @param {String} filename
  * @returns {{name:string;ext?:string}}
  */
-function fileNameToNameAndExt(fileName) {
-  const extIndex = fileName.lastIndexOf(`.`);
+function fileNameToNameAndExt(filename) {
+  const extIndex = filename.lastIndexOf(`.`);
   if (extIndex === -1)
     //   throw new Error(`File without extension.`);
-    return { name: fileName };
-  return { name: fileName.slice(0, extIndex), ext: fileName.slice(extIndex + 1) };
+    return { name: filename };
+  return { name: filename.slice(0, extIndex), ext: filename.slice(extIndex + 1) };
 }
 
 // File System operations
@@ -380,14 +393,20 @@ async function readTextFileContents(fileHandle) {
 }
 /**
  * Returns the content of an image file as a blob url
- * @param{String} fileName
+ * @param{String} filename
  */
-async function readImageFileContentsAsUrl(fileName) {
+async function readImageFileContentsAsUrl(filename) {
   if (!dirH) return;
-  const handle = await dirH.getFileHandle(fileName);
+  let handle;
+  try {
+    handle = await dirH.getFileHandle(filename);
+  } catch (error) {
+    showErrorToast(`Unable to read image contents for ${filename}.`);
+    throw new Error(`Unable to read image contents for ${filename}.`);
+  }
   if (!handle) {
-    showErrorToast(`File not found: "${fileName}".`, `Image URL reader`);
-    throw new Error(`Cannot get handle for "${fileName}".`);
+    showErrorToast(`File not found: "${filename}".`, `Image URL reader`);
+    throw new Error(`Cannot get handle for "${filename}".`);
   }
   const file = await handle.getFile();
   return URL.createObjectURL(file);
@@ -398,9 +417,16 @@ async function readImageFileContentsAsUrl(fileName) {
  * @param{String} contents
  */
 async function writeFile(filename, contents) {
-  const fileHandle = await dirH.getFileHandle(filename, {
+  /** @type {FileSystemFileHandle} */
+  let fileHandle;
+  try {
+    fileHandle = await dirH.getFileHandle(filename, {
     create: true,
   });
+  } catch (error) {
+    showErrorToast(`Unable to get write handle for ${filename}.`);
+    throw new Error(`Unable to get write handle for ${filename}.`);
+  }
   // Create a FileSystemWritableFileStream to write to.
   const writable = await fileHandle.createWritable();
   // Write the contents of the file to the stream.
@@ -422,7 +448,14 @@ async function getTrashDirectoryH() {
  * @param{String} filename
  */
 async function removeFile(filename) {
-  const srcFileHandle = await dirH.getFileHandle(filename);
+  /** @type {FileSystemFileHandle} */
+  let srcFileHandle;
+  try {
+    srcFileHandle = await dirH.getFileHandle(filename);
+  } catch (error) {
+    showErrorToast(`Unable to get delete handle for ${filename}.`);
+    throw new Error(`Unable to get delete handle for ${filename}.`);
+  }
   const delDirH = await getTrashDirectoryH();
   // @ts-ignore // .move exists on chrome
   await srcFileHandle.move(delDirH, filename);
@@ -516,12 +549,17 @@ async function generateTable() {
     row.classList.add(`dataset-row`);
     row.classList.add(i % 2 ? `even` : `odd`);
 
+    try {
     // row number & image name   
     row.appendChild(createInformationTableCell(rowId, stringI, file));
     // image
     row.appendChild(await createImageTableCell(rowId, stringI, file));
     // prompt
     row.appendChild(createImagePromptTableCell(rowId, stringI, file));
+    } catch (error) {
+      showErrorToast(`Unable to build image row for ${file.name}.`);
+      throw new Error(`Unable to build image row for ${file.name}. ${error?.message || String(error)}`);
+    }
 
     tbody.appendChild(row);
   }
