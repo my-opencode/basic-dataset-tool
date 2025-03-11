@@ -804,6 +804,7 @@ async function createImageElement(stringI, file) {
   img.setAttribute(`width`, String(zoomValue));
   img.setAttribute(`src`, await readImageFileContentsAsUrl(file.filename));
   img.setAttribute(`data-filename`, file.filename);
+  img.setAttribute(`load`, `lazy`);
   img.addEventListener(`load`, DoAfterImageLoads(stringI));
   return img;
 }
