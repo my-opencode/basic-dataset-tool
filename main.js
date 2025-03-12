@@ -245,18 +245,18 @@ async function listFilesInDirectory() {
         continue;
       }
       try {
-      const file = initNewFile(name);
-      if (extL === `txt`) {
-        file.description = await readTextFileContents(handle);
-      }
-      else {
-        file.filename = handle.name;
-        file.ext = ext;
-      }
+        const file = initNewFile(name);
+        if (extL === `txt`) {
+          file.description = await readTextFileContents(handle);
+        }
+        else {
+          file.filename = handle.name;
+          file.ext = ext;
+        }
       } catch (error) {
         showErrorToast(`Unable to read file ${name}.`);
         throw new Error(`Unable to read file ${name}. ${error?.message || String(error)}`);
-    }
+      }
     }
   files = files.filter(a => !!a.filename).sort((a, b) => a.name > b.name ? 1 : a.name < b.name ? -1 : 0);
 }
@@ -422,8 +422,8 @@ async function writeFile(filename, contents) {
   let fileHandle;
   try {
     fileHandle = await dirH.getFileHandle(filename, {
-    create: true,
-  });
+      create: true,
+    });
   } catch (error) {
     showErrorToast(`Unable to get write handle for ${filename}.`);
     throw new Error(`Unable to get write handle for ${filename}.`);
@@ -551,12 +551,12 @@ async function generateTable() {
     row.classList.add(i % 2 ? `even` : `odd`);
 
     try {
-    // row number & image name   
-    row.appendChild(createInformationTableCell(rowId, stringI, file));
-    // image
-    row.appendChild(await createImageTableCell(rowId, stringI, file));
-    // prompt
-    row.appendChild(createImagePromptTableCell(rowId, stringI, file));
+      // row number & image name   
+      row.appendChild(createInformationTableCell(rowId, stringI, file));
+      // image
+      row.appendChild(await createImageTableCell(rowId, stringI, file));
+      // prompt
+      row.appendChild(createImagePromptTableCell(rowId, stringI, file));
     } catch (error) {
       showErrorToast(`Unable to build image row for ${file.name}.`);
       throw new Error(`Unable to build image row for ${file.name}. ${error?.message || String(error)}`);
